@@ -1,36 +1,106 @@
 import numpy as np
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
-depth = 2
-drange = (-1, 1)
-resolution = 256
-n_iter = 256
-N = np.power(2, depth)-1
-prober = np.linspace(0, np.pi*8, resolution)
-prober = np.sin(prober)
-fig, ax = plt.subplots(2, 3, figsize=(12,8))
-perfect_image = prober[:,np.newaxis] * prober[np.newaxis,:]
-n_matrix = np.zeros(perfect_image.shape)
-o_matrix = np.zeros(perfect_image.shape)
+np.set_printoptions(precision=3, suppress=True)
 
-for i in range(n_iter):
-    noise = np.random.normal(0, 1, perfect_image.shape)
-    n_image = perfect_image + noise
-    o_image = perfect_image.copy()
-    n_image = (n_image+1)/2
-    o_image = (o_image+1)/2
-    n_image = np.clip(n_image, 0, 1)
-    o_image = np.clip(o_image, 0, 1)
-    n_dimg = np.rint(N * n_image)
-    o_dimg = np.rint(N * o_image)
+def interp_nearest(x_source, y_source, x_target):
+    dist = x_source[:, np.newaxis] - x_target[np.newaxis, :]
+    abs_dist = np.abs(dist)
+    addr = np.argmin(abs_dist, axis=0)
+    g_target = y_source[addr]
+    return g_target
+    # return np.zeros_like(x_target)
 
-    n_matrix += n_dimg
-    o_matrix += o_dimg
+def interp_linear(x_source, y_source, x_target):
+    dist = x_source[:, np.newaxis] - x_target[np.newaxis, :]
+    dist_lower = np.copy(dist)
+    dist_upper = np.copy(dist)
+    dist_lower[dist<0] = np.nan
+    dist_upper[dist>0] = np.nan
+    # print(dist_upper)
+    addr_upper = np.nanargmax(dist_upper, axis=0)
+    addr_lower = np.nanargmin(dist_lower, axis=0)
+    # print(addr_upper)
+    # print("--------------")
+    # print(addr_lower)
+    a = (y_source[addr_upper] - y_source[addr_lower])/(x_source[addr_upper] - x_source[addr_lower])
+    b = y_source[addr_upper] - a*x_source[addr_upper]
+    g_target = a * x_target + b
+    print(x_source)
+    # g_target[addr_upper-addr_lower==0] = x_source[[0,-1]]
+    print(g_target)
+    # print(a)
 
-    ax[0,0].imshow(perfect_image, cmap='binary')
-    ax[1,0].imshow(noise, cmap='binary')
-    ax[0,1].imshow(o_dimg, cmap='binary')
-    ax[1,1].imshow(n_dimg, cmap='binary')
-    ax[0,2].imshow(o_matrix, cmap='binary')
-    ax[1,2].imshow(n_matrix, cmap='binary')
-plt.savefig("foo.png")
+    return g_target
+
+    # g_target = y_source[np.rint(np.mean(addr1+addr2))]
+    # addr = np.argmin(abs_dist, axis=0)
+    # g_target = y_source[addr]
+    # return g_target
+
+def interp_cubic(x_source, y_source, x_target):
+    return np.zeros_like(x_target)
+
+# Probers
+original_prober = np.sort(np.random.uniform(size=8)*np.pi*4)
+target_prober = np.linspace(np.min(original_prober),
+                            np.max(original_prober), 32)
+
+# Sampling
+original_signal = np.sin(original_prober)
+
+# Out-of-box interpolators
+fn = interp1d(original_prober, original_signal, kind='nearest')
+fl = interp1d(original_prober, original_signal, kind='linear')
+fc = interp1d(original_prober, original_signal, kind='cubic')
+
+# Interpolation
+target_signal_fn = fn(target_prober)
+target_signal_fl = fl(target_prober)
+target_signal_fc = fc(target_prober)
+
+args = (original_prober, original_signal, target_prober)
+own_target_signal_fn = interp_nearest(*args)
+own_target_signal_fl = interp_linear(*args)
+own_target_signal_fc = interp_linear(*args)
+
+# Store them for plotting
+target_signals = [target_signal_fn, target_signal_fl, target_signal_fc]
+own_target_signals = [own_target_signal_fn, own_target_signal_fl, own_target_signal_fc]
+
+# Plotting
+fig, ax = plt.subplots(4,1,figsize=(8, 8*1.618))
+
+ax[0].scatter(original_prober, np.ones_like(original_prober) * -.5,
+              label = 'origin', c='black')
+ax[0].scatter(target_prober, np.ones_like(target_prober) * .5,
+              label = 'target', c='red')
+ax[0].plot(original_prober, original_signal, c='black')
+ax[0].set_ylim(-1.5,1.5)
+ax[0].legend(frameon=False, loc=9, ncol=2)
+ax[0].set_yticks([])
+ax[0].set_xticks(original_prober)
+ax[0].set_xticklabels([])
+ax[0].spines['top'].set_visible(False)
+ax[0].spines['right'].set_visible(False)
+ax[0].spines['left'].set_visible(False)
+ax[0].grid(ls=":")
+
+
+for i, (target_signal, own_target_signal) in enumerate(zip(target_signals,
+                                                           own_target_signals)):
+    ax[1+i].plot(original_prober, original_signal, c='black', ls=":")
+    ax[1+i].plot(target_prober, target_signal, 'red', ls=":")
+    ax[1+i].plot(target_prober, own_target_signal, 'red')
+    ax[1+i].grid(ls=":")
+    ax[1+i].set_xticks(target_prober)
+    ax[1+i].set_xticklabels([])
+    ax[1+i].spines['top'].set_visible(False)
+    ax[1+i].spines['right'].set_visible(False)
+
+ax[1].set_title('neighbor')
+ax[2].set_title('linear')
+ax[3].set_title('cubic')
+
+plt.savefig('foo.png')
