@@ -33,7 +33,7 @@ for index, angle in enumerate(angles):
     ax[2,0].plot(angles[:index], abssums_s1[:index])
     ax[2,0].plot(angles[:index], abssums_s3[:index])
 
-plt.savefig('plt.png')
+    plt.savefig('plt.png')
 min_s1 = abssums_s1.argmin()
 bestangle_s1 = angles[min_s1]
 min_s3 = abssums_s3.argmin()

@@ -12,10 +12,10 @@ image.ravel()[random_points-64]=1
 dis = morphology.disk(1)
 dil = morphology.binary_dilation(image, dis)
 ero = morphology.binary_erosion(image, dis)
-opening = morphology.binary_dilation(morphology.binary_erosion(image, dis), dis)
-closing = morphology.binary_erosion(morphology.binary_dilation(image, dis), dis)
 #otwarcie - erozja -> dylatacja
+opening = morphology.binary_dilation(morphology.binary_erosion(image, dis), dis)
 #zamknicie - dylatacja -> erozja
+closing = morphology.binary_erosion(morphology.binary_dilation(image, dis), dis)
 con = np.array([closing, opening, image])
 con = con.transpose((1,2,0))
 print(con.shape)
