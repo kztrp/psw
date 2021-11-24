@@ -12,8 +12,8 @@ rr, cc = rectangle((92,92), end=(128, 128))
 entry_img[rr, cc] = 1
 rr, cc = rectangle((128,128), end=(144, 144))
 entry_img[rr, cc] = 1
-
-rot_img = rotate(entry_img, np.random.uniform(low=-20, high=20))
+first_angle = np.random.uniform(low=-20, high=20)
+rot_img = rotate(entry_img, first_angle)
 s1 = np.array([[-1, 0, 1],[-2, 0, 2],[-1,0,1]])
 s3 = np.array([[1,2,1],[0,0,0],[-1,-2,-1]])
 angles = np.linspace(-30, 30, 50)
